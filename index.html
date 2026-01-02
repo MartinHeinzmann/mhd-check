@@ -8,6 +8,14 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Unterdrücke Tailwind CSS CDN Warnung
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            if (args[0] && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn.apply(console, args);
+        };
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -72,6 +80,9 @@
             const [selectedCategory, setSelectedCategory] = useState('Alle');
             const [selectedItem, setSelectedItem] = useState(null);
             const [view, setView] = useState('home');
+            const [ampelFilter, setAmpelFilter] = useState('alle');
+            const [searchSuggestions, setSearchSuggestions] = useState([]);
+            const [showSuggestions, setShowSuggestions] = useState(false);
 
             const lebensmittel = [
                 { id: 229, name: "Abgepackter Kuchen", kategorie: "Kuchen und Süssgebäck", haltbarkeit: "1-2 Wochen nach MHD bei Raumtemperatur", sehen_gut: "Feucht, frisch", sehen_schlecht: "Schimmel, trocken", riechen_gut: "Süss, aromatisch", riechen_schlecht: "Schimmel, muffig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz haltbar geöffnet", ampel: "gelb" },
@@ -90,7 +101,7 @@
 { id: 111, name: "Avocado", kategorie: "Frisches Obst", haltbarkeit: "2-5 Tage bei Raumtemperatur je nach Reife", sehen_gut: "Weich, grün bis braun innen", sehen_schlecht: "Schwarz, matschig, Schimmel", riechen_gut: "Buttrig, nussig", riechen_schlecht: "Ranzig, muffig", entsorgen: "Schwarz, fauliger Geruch", hinweise: "Reife beachten, braune Stellen normal", ampel: "rot" },
 { id: 237, name: "Backpulver", kategorie: "Mehl und Backzutaten", haltbarkeit: "12-18 Monate nach MHD bei trockener Lagerung, Wirkverlust möglich", sehen_gut: "Pulverig, locker", sehen_schlecht: "Verklumpt, feucht", riechen_gut: "Neutral", riechen_schlecht: "Muffig", entsorgen: "Verklumpung, Feuchte", hinweise: "Wirkverlust bei Feuchte", ampel: "gelb" },
 { id: 120, name: "Bacon", kategorie: "Geräuchertes und Gepökeltes", haltbarkeit: "1-2 Wochen im Kühlschrank nach Öffnung", sehen_gut: "Knusprig nach Braten", sehen_schlecht: "Ranzig, verfärbt", riechen_gut: "Aromatisch", riechen_schlecht: "Ranzig", entsorgen: "Ranzig", hinweise: "Bei Ranzigkeit entsorgen", ampel: "gelb" },
-{ id: 24, name: "Bagels", kategorie: "Brot und Brötchen", haltbarkeit: "2-3 Tage nach MHD bei Raumtemperatur", sehen_gut: "Weich, frisch", sehen_schlecht: "Schimmel, hart", riechen_gut: "Neutral", riechen_schlecht: "Schimmelig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz frisch", ampel: "rot" },
+{ id: 24, name: "Bagels", kategorie: "Brot und Brötchen", haltbarkeit: "2-3 Tage nach MHD bei Raumtemperatur", sehen_gut: "Weich, frisch", sehen_schlecht: "Schimmel, hart", riechen_gut: "Neutral", riechen_schlecht: "Schimmelig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz frisch", hygiene: "Bei Schimmel komplettes Brot/alle Bagels entsorgen - Schimmelsporen durchdringen das gesamte Produkt unsichtbar. Nicht abschneiden oder abkratzen! Brot trocken und luftig lagern (Brotkasten). Hände vor Kontakt waschen. Schneidebrett regelmäßig reinigen.", ampel: "rot" },
 { id: 214, name: "Baked Beans (Dose)", kategorie: "Konserven Hülsenfrüchte", haltbarkeit: "2-5 Jahre nach MHD bei Raumtemperatur", sehen_gut: "In Sauce, typisch", sehen_schlecht: "Schleimig, Schimmel", riechen_gut: "Tomatig, süsslich", riechen_schlecht: "Muffig, gärig", entsorgen: "Aufgeblähte Dose, Schimmel", hinweise: "In Sauce konserviert, bei Geruch entsorgen", ampel: "gruen" },
 { id: 40, name: "Balsamico", kategorie: "Essig", haltbarkeit: "Mehrere Jahre nach MHD bei kühler, dunkler Lagerung", sehen_gut: "Dunkel, sirupartig", sehen_schlecht: "Trüb, Fremdgeruch", riechen_gut: "Süss-säuerlich", riechen_schlecht: "Unangenehm", entsorgen: "Ungewöhnlicher Geruch", hinweise: "Lange haltbar", ampel: "gelb" },
 { id: 107, name: "Bananen", kategorie: "Frisches Obst", haltbarkeit: "3-7 Tage bei Raumtemperatur (18-22°C) je nach Reife", sehen_gut: "Gelb, je nach Reife braun gesprenkelt", sehen_schlecht: "Schwarz, matschig", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Starker fauliger Geruch, Schimmel", hinweise: "Reife beachten, braune Stellen normal", ampel: "rot" },
@@ -101,9 +112,9 @@
 { id: 73, name: "Blumenkohl", kategorie: "Frisches Gemüse", haltbarkeit: "5-7 Tage im Kühlschrank", sehen_gut: "Fest, weiss", sehen_schlecht: "Braun, Schimmel", riechen_gut: "Neutral", riechen_schlecht: "Muffig, faulig", entsorgen: "Braune Flecken, Schimmel", hinweise: "Kühl lagern", ampel: "gelb" },
 { id: 216, name: "Bohnen (Dose)", kategorie: "Konserven Metalldosen", haltbarkeit: "2-5 Jahre nach MHD bei Raumtemperatur", sehen_gut: "Grün/weiss je nach Sorte", sehen_schlecht: "Grau, verfärbt", riechen_gut: "Neutral, gemüsig", riechen_schlecht: "Sauer, gärig", entsorgen: "Aufgeblähte Dose, übler Geruch", hinweise: "Extrem lange haltbar, verlieren Biss", ampel: "gruen" },
 { id: 175, name: "Bohnen (trocken)", kategorie: "Hülsenfrüchte (trocken)", haltbarkeit: "2-5 Jahre nach MHD bei trockener Lagerung unter 20°C", sehen_gut: "Trocken, fest", sehen_schlecht: "Feucht, Schädlinge", riechen_gut: "Neutral", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schädlinge", hinweise: "Lange haltbar bei trockener Lagerung", ampel: "gruen" },
-{ id: 25, name: "Brezeln", kategorie: "Brot und Brötchen", haltbarkeit: "1-2 Tage nach MHD bei Raumtemperatur", sehen_gut: "Knusprig, salzig", sehen_schlecht: "Schimmel, hart", riechen_gut: "Neutral", riechen_schlecht: "Schimmelig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz frisch", ampel: "rot" },
+{ id: 25, name: "Brezeln", kategorie: "Brot und Brötchen", haltbarkeit: "1-2 Tage nach MHD bei Raumtemperatur", sehen_gut: "Knusprig, salzig", sehen_schlecht: "Schimmel, hart", riechen_gut: "Neutral", riechen_schlecht: "Schimmelig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz frisch", hygiene: "Bei Schimmel komplett entsorgen - nicht nur betroffene Stelle! Schimmelsporen verbreiten sich unsichtbar im gesamten Gebäck. Trocken lagern in Papiertüte oder Brotkasten. Nicht in Plastik (fördert Feuchtigkeit und Schimmel).", ampel: "rot" },
 { id: 74, name: "Brokkoli", kategorie: "Frisches Gemüse", haltbarkeit: "3-5 Tage im Kühlschrank", sehen_gut: "Grün, fest", sehen_schlecht: "Gelb, Schimmel", riechen_gut: "Frisch, leicht bitter", riechen_schlecht: "Muffig, faulig", entsorgen: "Gelb, Schimmel", hinweise: "Kurz frisch", ampel: "gelb" },
-{ id: 98, name: "Brombeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, maximal 3-4 Tage im Kühlschrank", sehen_gut: "Fest, dunkel", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", ampel: "rot" },
+{ id: 98, name: "Brombeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, maximal 3-4 Tage im Kühlschrank", sehen_gut: "Fest, dunkel", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", hygiene: "Gründlich waschen (können Erde/Sand enthalten). Schimmelbeeren sofort entfernen und getrennt entsorgen. Nicht stapeln (zerdrückt schnell). Trocken lagern. Bei Wildbeeren: besonders gründlich waschen wegen möglicher Parasiten (Fuchsbandwurm).", ampel: "rot" },
 { id: 23, name: "Brötchen (frisch aufbackbar)", kategorie: "Brot und Brötchen", haltbarkeit: "1-2 Tage nach MHD, eingefroren 3-6 Monate", sehen_gut: "Knusprig nach Aufbacken", sehen_schlecht: "Schimmel, hart", riechen_gut: "Neutral", riechen_schlecht: "Schimmelig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Aufbacken verlängert Nutzbarkeit kurz", ampel: "rot" },
 { id: 296, name: "Brühen und Fonds (Dose)", kategorie: "Suppen und Eintöpfe", haltbarkeit: "1-3 Jahre nach MHD bei Raumtemperatur", sehen_gut: "Klar, aromatisch", sehen_schlecht: "Trüb, ranzig", riechen_gut: "Aromatisch", riechen_schlecht: "Faulig, ranzig", entsorgen: "Aufgeblähte Dose, ranziger Geruch", hinweise: "Konzentrierte Aromen, bei Geruch entsorgen", ampel: "gruen" },
 { id: 307, name: "Brühwurst (Wiener)", kategorie: "Wurstwaren", haltbarkeit: "1-2 Wochen nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Schleimig, Verfärbung", riechen_gut: "Neutral, würzig", riechen_schlecht: "Faulig, muffig", entsorgen: "Schleim, starker Geruch", hinweise: "Bei Geruch entsorgen", ampel: "gelb" },
@@ -124,7 +135,7 @@
 { id: 134, name: "Couscous", kategorie: "Getreideprodukte", haltbarkeit: "6-12 Monate nach MHD bei trockener Lagerung", sehen_gut: "Trocken, locker", sehen_schlecht: "Feucht, Schimmel", riechen_gut: "Neutral", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Trocken lagern", ampel: "gelb" },
 { id: 199, name: "Cracker", kategorie: "Knabberartikel", haltbarkeit: "6-12 Monate nach MHD bei trockener Lagerung", sehen_gut: "Knusprig, trocken", sehen_schlecht: "Schal, feucht", riechen_gut: "Neutral", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Trocken lagern", ampel: "gelb" },
 { id: 5, name: "Craft Beer", kategorie: "Alkoholische Getränke", haltbarkeit: "3-6 Monate nach MHD bei kühler (4-7°C) Lagerung", sehen_gut: "Je nach Stil klar/trüb", sehen_schlecht: "Schal, ranzig", riechen_gut: "Aromatisch, hopfig", riechen_schlecht: "Schal, ranzig", entsorgen: "Schal, ranziger Geruch", hinweise: "Kühl lagern", ampel: "gelb" },
-{ id: 265, name: "Crème fraîche", kategorie: "Sahne und Creme fraîche", haltbarkeit: "3-5 Tage nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Cremig, säuerlich", sehen_schlecht: "Schimmel, Gerinnung", riechen_gut: "Säuerlich", riechen_schlecht: "Faulig", entsorgen: "Schimmel, starker Geruch", hinweise: "Bei Schimmel entsorgen", ampel: "rot" },
+{ id: 265, name: "Crème fraîche", kategorie: "Sahne und Creme fraîche", haltbarkeit: "3-5 Tage nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Cremig, säuerlich", sehen_schlecht: "Schimmel, Gerinnung", riechen_gut: "Säuerlich", riechen_schlecht: "Faulig", entsorgen: "Schimmel, starker Geruch", hinweise: "Bei Schimmel entsorgen", hygiene: "Kühl lagern (max. 7°C). Saubere Löffel verwenden, nie direkt aus der Verpackung entnehmen. Nach Öffnung zügig verbrauchen (3-5 Tage). Bei Schimmel komplett entsorgen. Nicht bei Raumtemperatur stehen lassen.", ampel: "rot" },
 { id: 153, name: "Curry", kategorie: "Gewürze", haltbarkeit: "2-3 Jahre nach MHD bei trockener, dunkler Lagerung", sehen_gut: "Aromatisch, farbintensiv", sehen_schlecht: "Verblasst, feucht", riechen_gut: "Aromatisch", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Aromaverlust über Zeit", ampel: "gelb" },
 { id: 276, name: "Currypasten (Glas)", kategorie: "Saucen und Pasten im Glas", haltbarkeit: "6-12 Monate nach MHD bei Raumtemperatur", sehen_gut: "Farbe typisch, aromatisch", sehen_schlecht: "Verfärbt, Schimmel", riechen_gut: "Aromatisch, würzig", riechen_schlecht: "Ranzig, muffig", entsorgen: "Schimmel, ranziger Geruch", hinweise: "Bei Geruch/Schimmel entsorgen", ampel: "gelb" },
 { id: 305, name: "Datteln (getrocknet)", kategorie: "Trockenfrüchte", haltbarkeit: "6-12 Monate nach MHD bei trockener Lagerung unter 25°C", sehen_gut: "Trocken, fest", sehen_schlecht: "Schimmelig, klebrig", riechen_gut: "Süss, aromatisch", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, Gärung", hinweise: "Getrocknet lange haltbar", ampel: "gelb" },
@@ -139,7 +150,7 @@
 { id: 125, name: "Energydrinks", kategorie: "Getränke in Flaschen", haltbarkeit: "6-12 Monate nach MHD ungeöffnet", sehen_gut: "Sprudelnd, klar", sehen_schlecht: "Schal, trüb", riechen_gut: "Süss, aromatisch", riechen_schlecht: "Schal, gärig", entsorgen: "Gärung, muffiger Geruch", hinweise: "Ungeöffnet lange haltbar", ampel: "gelb" },
 { id: 215, name: "Erbsen (Dose)", kategorie: "Konserven Metalldosen", haltbarkeit: "2-5 Jahre nach MHD bei Raumtemperatur", sehen_gut: "Grün, leicht stärkehaltig", sehen_schlecht: "Grau, schwarz, schleimig", riechen_gut: "Neutral, leicht gemüsig", riechen_schlecht: "Sauer, gärig, muffig", entsorgen: "Aufgeblähte Dose, übler Geruch, Verfärbung, Schaumbildung", hinweise: "Sehr lange haltbar bei intakter Dose, ideal zum Weiterverarbeiten", ampel: "gruen" },
 { id: 177, name: "Erbsen (trocken)", kategorie: "Hülsenfrüchte (trocken)", haltbarkeit: "2-5 Jahre nach MHD bei trockener Lagerung unter 20°C", sehen_gut: "Trocken, fest", sehen_schlecht: "Feucht, Schädlinge", riechen_gut: "Neutral", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schädlinge", hinweise: "Lange haltbar bei trockener Lagerung", ampel: "gruen" },
-{ id: 95, name: "Erdbeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, 3-5 Tage im Kühlschrank", sehen_gut: "Leuchtend rot, fest", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", ampel: "rot" },
+{ id: 95, name: "Erdbeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, 3-5 Tage im Kühlschrank", sehen_gut: "Leuchtend rot, fest", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", hygiene: "Vor Verzehr gründlich unter fließendem Wasser waschen. Bei Schimmel komplette Packung entsorgen (Sporen verbreiten sich unsichtbar). Nicht vor dem Lagern waschen (fördert Schimmel). Grün und Stiel erst nach dem Waschen entfernen. Kühl lagern, aber nicht zu kalt (verlieren Aroma).", ampel: "rot" },
 { id: 13, name: "Erdnussbutter", kategorie: "Aufstriche im Glas", haltbarkeit: "3-6 Monate nach MHD bei Raumtemperatur, 9-12 Monate im Kühlschrank", sehen_gut: "Cremig, homogen", sehen_schlecht: "Ranzig, Schimmel", riechen_gut: "Nussig", riechen_schlecht: "Ranzig, muffig", entsorgen: "Schimmel, ranziger Geruch", hinweise: "Ölabscheidung normal, umrühren", ampel: "gelb" },
 { id: 284, name: "Erdnussöl", kategorie: "Speiseöle", haltbarkeit: "6-12 Monate nach Öffnung bei kühler, dunkler Lagerung", sehen_gut: "Klar, nussig", sehen_schlecht: "Trüb, ranzig", riechen_gut: "Nussig", riechen_schlecht: "Ranzig", entsorgen: "Ranzig", hinweise: "Kühl lagern", ampel: "gelb" },
 { id: 150, name: "Estragon", kategorie: "Getrocknete Kräuter", haltbarkeit: "1-3 Jahre nach MHD bei trockener, dunkler Lagerung, Aromaverlust", sehen_gut: "Aromatisch, trocken", sehen_schlecht: "Verblasst, feucht", riechen_gut: "Aromatisch", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Aromaverlust über Zeit", ampel: "gelb" },
@@ -149,21 +160,21 @@
 { id: 46, name: "Fertigsaucen (Gläser Beutel)", kategorie: "Fertigprodukte und Convenience", haltbarkeit: "3-6 Monate nach MHD ungeöffnet bei Raumtemperatur", sehen_gut: "Homogen, aromatisch", sehen_schlecht: "Schimmel, Gärung", riechen_gut: "Aromatisch", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, Gärgeruch", hinweise: "Bei Geruch/Schimmel entsorgen", ampel: "gelb" },
 { id: 295, name: "Fertigsuppen (Dose)", kategorie: "Suppen und Eintöpfe", haltbarkeit: "1-3 Jahre nach MHD bei Raumtemperatur", sehen_gut: "Klar bis sämig, typisch", sehen_schlecht: "Schaum, Schimmel, Verfärbung", riechen_gut: "Würzig, typisch", riechen_schlecht: "Faulig, gärig", entsorgen: "Aufgeblähte Dose, Schimmel", hinweise: "Bei Geruch/Schimmel entsorgen", ampel: "gruen" },
 { id: 194, name: "Feta", kategorie: "Käse", haltbarkeit: "1-2 Wochen nach MHD im Kühlschrank (4-7°C), in Lake länger", sehen_gut: "Krümelig, salzig", sehen_schlecht: "Schimmel, schleimig", riechen_gut: "Salzig, aromatisch", riechen_schlecht: "Faulig, muffig", entsorgen: "Schimmel, starker Geruch", hinweise: "Bei Schimmel entsorgen", ampel: "gelb" },
-{ id: 50, name: "Fischfilets", kategorie: "Fisch & Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Glänzend, klar", sehen_schlecht: "Trüb, schleimig", riechen_gut: "Frisch, mild", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, Verfärbung", hinweise: "Verbrauchsdatum beachten", ampel: "rot" },
+{ id: 50, name: "Fischfilets", kategorie: "Fisch & Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Glänzend, klar", sehen_schlecht: "Trüb, schleimig", riechen_gut: "Frisch, mild", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, Verfärbung", hinweise: "Verbrauchsdatum beachten", hygiene: "Separate Arbeitsflächen und Messer für Fisch. Sofort kühlen (max. 2°C). Innerhalb 24h verarbeiten. Hände vor und nach Kontakt gründlich waschen. Nicht mit Rohkost kombinieren. Bei mind. 63°C durchgaren. Auftauwasser wegschütten, nicht verwenden.", ampel: "rot" },
 { id: 300, name: "Fischfilets (tiefgekühlt)", kategorie: "Tiefkühlprodukte", haltbarkeit: "6-9 Monate nach MHD bei durchgehender Lagerung bei -18°C", sehen_gut: "Gefroren, klar", sehen_schlecht: "Gefrierbrand, verfärbt", riechen_gut: "Meeresartig nach Auftauen", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Gefrierbrand, übler Geruch nach Auftauen", hinweise: "Bei Auftauen prüfen", ampel: "gelb" },
 { id: 312, name: "Fischsauce", kategorie: "Würzsaucen und Pasten", haltbarkeit: "12-24 Monate nach MHD bei Raumtemperatur", sehen_gut: "Klar bis leicht trüb", sehen_schlecht: "Trüb, Schimmel", riechen_gut: "Aromatisch, fischig", riechen_schlecht: "Faulig, stechend", entsorgen: "Trübung, starker fauliger Geruch", hinweise: "Sehr salzig, bei Geruch entsorgen", ampel: "gelb" },
 { id: 293, name: "Fleischersatz (vegane Burger Würstchen)", kategorie: "Spezielle Diätprodukte", haltbarkeit: "1-2 Wochen nach MHD im Kühlschrank", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Schleimig, verfärbt", riechen_gut: "Neutral, würzig", riechen_schlecht: "Sauer, faulig", entsorgen: "Schleim, starker Geruch", hinweise: "Verbrauchsdatum beachten", ampel: "gelb" },
 { id: 32, name: "Flüssigei (pasteurisiert)", kategorie: "Eier", haltbarkeit: "3-5 Tage nach MHD im Kühlschrank", sehen_gut: "Homogen, flüssig", sehen_schlecht: "Geronnen, Schimmel", riechen_gut: "Neutral", riechen_schlecht: "Faulig", entsorgen: "Geronnen, starker Geruch", hinweise: "Pasteurisiert, aber Verbrauchsdatum beachten", ampel: "gelb" },
 { id: 30, name: "Frische Schaleneier", kategorie: "Eier", haltbarkeit: "7-14 Tage nach MHD im Kühlschrank, nur durchgegart verwenden", sehen_gut: "Schale intakt, sauber", sehen_schlecht: "Rissig, verschmutzt", riechen_gut: "Neutral", riechen_schlecht: "Faulig (bei faulen Eiern)", entsorgen: "Schale beschädigt, fauliger Geruch", hinweise: "Wassertest möglich, Verbrauchsdatum beachten", ampel: "gelb" },
-{ id: 49, name: "Frischer Fisch", kategorie: "Fisch & Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Glänzend, klar, feste Textur", sehen_schlecht: "Trüb, schleimig, verfärbt", riechen_gut: "Nach Meer, frisch", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, schleimige Oberfläche", hinweise: "Verbrauchsdatum beachten, nicht riskieren", ampel: "rot" },
-{ id: 192, name: "Frischkäse", kategorie: "Käse", haltbarkeit: "3-5 Tage nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Cremig, homogen", sehen_schlecht: "Schimmel, Gerinnung", riechen_gut: "Mild, frisch", riechen_schlecht: "Sauer, faulig", entsorgen: "Schimmel, Gerinnung", hinweise: "Bei Schimmel entsorgen", ampel: "rot" },
-{ id: 245, name: "Frischmilch", kategorie: "Milchprodukte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Klar, homogen", sehen_schlecht: "Geronnen, klumpig", riechen_gut: "Neutral, milchig", riechen_schlecht: "Sauer, faulig", entsorgen: "Geronnene Konsistenz, starker saurer Geruch", hinweise: "Verbrauchsdatum beachten, nicht riskieren", ampel: "rot" },
+{ id: 49, name: "Frischer Fisch", kategorie: "Fisch & Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Glänzend, klar, feste Textur", sehen_schlecht: "Trüb, schleimig, verfärbt", riechen_gut: "Nach Meer, frisch", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, schleimige Oberfläche", hinweise: "Verbrauchsdatum beachten, nicht riskieren", hygiene: "Separate Schneidebretter für Fisch verwenden (idealerweise Kunststoff, besser zu reinigen). Kühlkette strikt einhalten (max. 2°C). Innerhalb von 24 Stunden nach Kauf verarbeiten. Hände, Messer und Arbeitsflächen gründlich mit heißem Wasser reinigen. Bei mindestens 63°C durchgaren. Nicht mit rohen Lebensmitteln in Kontakt bringen.", ampel: "rot" },
+{ id: 192, name: "Frischkäse", kategorie: "Käse", haltbarkeit: "3-5 Tage nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Cremig, homogen", sehen_schlecht: "Schimmel, Gerinnung", riechen_gut: "Mild, frisch", riechen_schlecht: "Sauer, faulig", entsorgen: "Schimmel, Gerinnung", hinweise: "Bei Schimmel entsorgen", hygiene: "Immer gekühlte Lagerung (max. 7°C). Saubere Löffel verwenden, nicht aus Packung direkt aufs Brot streichen (Kreuzkontamination). Nach Öffnung innerhalb 3-5 Tagen verbrauchen. Bei Schimmel komplett entsorgen (nicht abkratzen). Verpackung sauber halten.", ampel: "rot" },
+{ id: 245, name: "Frischmilch", kategorie: "Milchprodukte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Klar, homogen", sehen_schlecht: "Geronnen, klumpig", riechen_gut: "Neutral, milchig", riechen_schlecht: "Sauer, faulig", entsorgen: "Geronnene Konsistenz, starker saurer Geruch", hinweise: "Verbrauchsdatum beachten, nicht riskieren", hygiene: "Immer im Kühlschrank lagern (max. 7°C). Nach Öffnung zügig verbrauchen (2-3 Tage). Nicht aus der Packung trinken (Keimübertragung). Verschluss sauber halten. Bei Verwendung in Speisen für Kleinkinder, Schwangere oder immungeschwächte Personen: Verbrauchsdatum strikt einhalten.", ampel: "rot" },
 { id: 184, name: "Fruchtjoghurt", kategorie: "Joghurt und Quark", haltbarkeit: "7-14 Tage nach MHD im Kühlschrank (4-7°C)", sehen_gut: "Cremig, fruchtig", sehen_schlecht: "Schimmel, Gärung", riechen_gut: "Fruchtig, säuerlich", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, Gärgeruch", hinweise: "Bei Schimmel entsorgen", ampel: "gelb" },
 { id: 126, name: "Fruchtsäfte (Tetra/Weichpack)", kategorie: "Getränke in Weichpackungen", haltbarkeit: "2-4 Wochen nach MHD ungeöffnet, 3-5 Tage nach Öffnung im Kühlschrank", sehen_gut: "Klar, farbtypisch", sehen_schlecht: "Trüb, Gärung", riechen_gut: "Fruchtig", riechen_schlecht: "Gärig, muffig", entsorgen: "Gärung, starker muffiger Geruch", hinweise: "Nach Öffnung kühl lagern", ampel: "gelb" },
 { id: 166, name: "Fünf-Gewürze-Pulver", kategorie: "Gewürzmischungen", haltbarkeit: "1-2 Jahre nach MHD bei trockener, dunkler Lagerung", sehen_gut: "Aromatisch, trocken", sehen_schlecht: "Verblasst, feucht", riechen_gut: "Aromatisch", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Aromaverlust über Zeit", ampel: "gelb" },
 { id: 164, name: "Garam Masala", kategorie: "Gewürzmischungen", haltbarkeit: "1-2 Jahre nach MHD bei trockener, dunkler Lagerung", sehen_gut: "Aromatisch, trocken", sehen_schlecht: "Verblasst, feucht", riechen_gut: "Aromatisch", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Aromaverlust über Zeit", ampel: "gelb" },
-{ id: 230, name: "Garnelen (frisch)", kategorie: "Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Schleimig, verfärbt", riechen_gut: "Meeresartig", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Schleim, starker Geruch", hinweise: "Verbrauchsdatum beachten", ampel: "rot" },
-{ id: 57, name: "Geflügel (frisch)", kategorie: "Frisches Fleisch", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Grau/grün, schleimig", riechen_gut: "Neutral, leicht fleischig", riechen_schlecht: "Sauer, faulig, ammoniakartig", entsorgen: "Aufgeblähte Verpackung, übler Geruch", hinweise: "Verbrauchsdatum beachten", ampel: "rot" },
+{ id: 230, name: "Garnelen (frisch)", kategorie: "Meeresfrüchte", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Schleimig, verfärbt", riechen_gut: "Meeresartig", riechen_schlecht: "Faulig, ammoniakartig", entsorgen: "Schleim, starker Geruch", hinweise: "Verbrauchsdatum beachten", hygiene: "Eisgekühlt lagern (0-2°C). Sofort nach Kauf verarbeiten. Separate Schneidebretter verwenden. Hände gründlich waschen. Bei 70°C durchgaren bis Fleisch undurchsichtig und rosa/rot ist. Schale und Darm entfernen. Nicht mit anderen Lebensmitteln kreuzkontaminieren.", ampel: "rot" },
+{ id: 57, name: "Geflügel (frisch)", kategorie: "Frisches Fleisch", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden", sehen_gut: "Farbe typisch, fest", sehen_schlecht: "Grau/grün, schleimig", riechen_gut: "Neutral, leicht fleischig", riechen_schlecht: "Sauer, faulig, ammoniakartig", entsorgen: "Aufgeblähte Verpackung, übler Geruch", hinweise: "Verbrauchsdatum beachten", hygiene: "Arbeitsfläche und Messer nach Kontakt sofort mit heißem Wasser und Spülmittel reinigen oder desinfizieren. Separate Schneidebretter für rohes Fleisch verwenden. Hände gründlich waschen (mind. 20 Sekunden mit Seife). Nicht mit rohem Gemüse oder Salat in Kontakt bringen (Kreuzkontamination vermeiden). Bei 75°C Kerntemperatur mindestens 2 Minuten durchgaren. Kühlkette nicht unterbrechen.", ampel: "rot" },
 { id: 297, name: "Gefrorenes Gemüse", kategorie: "Tiefkühlprodukte", haltbarkeit: "12-24 Monate nach MHD bei durchgehender Lagerung bei -18°C", sehen_gut: "Gefroren, farbtypisch", sehen_schlecht: "Gefrierbrand, weisse Stellen", riechen_gut: "Neutral, gemüsig", riechen_schlecht: "Muffig nach Auftauen", entsorgen: "Gefrierbrand, übler Geruch nach Auftauen", hinweise: "Bei Auftauen prüfen, durchgehend gefroren oft noch essbar", ampel: "gelb" },
 { id: 298, name: "Gefrorenes Obst", kategorie: "Tiefkühlprodukte", haltbarkeit: "12-24 Monate nach MHD bei durchgehender Lagerung bei -18°C", sehen_gut: "Gefroren, farbtypisch", sehen_schlecht: "Gefrierbrand, Verfärbung", riechen_gut: "Fruchtig nach Auftauen", riechen_schlecht: "Muffig, gärig nach Auftauen", entsorgen: "Gefrierbrand, muffiger Geruch nach Auftauen", hinweise: "Bei Auftauen prüfen", ampel: "gelb" },
 { id: 169, name: "Gekochtes Gemüse (Glas)", kategorie: "Glaskonserven", haltbarkeit: "12-18 Monate nach MHD ungeöffnet bei Raumtemperatur", sehen_gut: "Farbe typisch, weich", sehen_schlecht: "Schleimig, verfärbt", riechen_gut: "Gemüsig", riechen_schlecht: "Muffig, gärig", entsorgen: "Deckel nicht vakuumiert, Schimmel", hinweise: "Bei Geruch/Schimmel entsorgen", ampel: "gruen" },
@@ -175,7 +186,7 @@
 { id: 53, name: "Gulasch (Konserve)", kategorie: "Fleischkonserven", haltbarkeit: "12-24 Monate nach MHD bei kühler Lagerung", sehen_gut: "Stückig, Sauce typisch", sehen_schlecht: "Schleimig, verfärbt", riechen_gut: "Fleischig, würzig", riechen_schlecht: "Faulig, sauer", entsorgen: "Aufgeblähte Dose, starker Geruch", hinweise: "Bei Geruch entsorgen", ampel: "gruen" },
 { id: 67, name: "Gurken", kategorie: "Frisches Gemüse", haltbarkeit: "5-7 Tage im Kühlschrank", sehen_gut: "Fest, knackig", sehen_schlecht: "Schlaff, weich, Schimmel", riechen_gut: "Frisch, gurkenartig", riechen_schlecht: "Muffig, faulig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Kurz frisch", ampel: "gelb" },
 { id: 246, name: "H-Milch (ungeöffnet)", kategorie: "Milchprodukte", haltbarkeit: "3-6 Monate nach MHD ungeöffnet bei Raumtemperatur, 3-5 Tage nach Öffnung gekühlt", sehen_gut: "Klar, homogen", sehen_schlecht: "Geronnen, verfärbt", riechen_gut: "Neutral, milchig", riechen_schlecht: "Sauer, faulig", entsorgen: "Aufgeblähte Verpackung, starker saurer Geruch", hinweise: "Ungeöffnet länger haltbar, geöffnet schneller verderblich", ampel: "gelb" },
-{ id: 58, name: "Hackfleisch", kategorie: "Frisches Fleisch", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden - HÖCHSTES RISIKO", sehen_gut: "Rosa, fein strukturiert", sehen_schlecht: "Grau, schleimig", riechen_gut: "Neutral, fleischig", riechen_schlecht: "Sauer, faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, schleimige Oberfläche", hinweise: "Verbrauchsdatum strikt beachten", ampel: "rot" },
+{ id: 58, name: "Hackfleisch", kategorie: "Frisches Fleisch", haltbarkeit: "NIEMALS nach Verbrauchsdatum verwenden - HÖCHSTES RISIKO", sehen_gut: "Rosa, fein strukturiert", sehen_schlecht: "Grau, schleimig", riechen_gut: "Neutral, fleischig", riechen_schlecht: "Sauer, faulig, ammoniakartig", entsorgen: "Starker fauliger Geruch, schleimige Oberfläche", hinweise: "Verbrauchsdatum strikt beachten", hygiene: "SOFORT nach Kauf verarbeiten oder bei max. 2-4°C kühlen. Verbrauchsdatum absolut einhalten - höchstes Infektionsrisiko! Arbeitsflächen gründlich reinigen und desinfizieren. Hände vor und nach Kontakt waschen. Komplett durchgaren - kein rosa Kern (mind. 70°C). Nicht neben Rohkost lagern oder verarbeiten. Separate Schneidebretter und Messer nutzen.", ampel: "rot" },
 { id: 138, name: "Haferflocken", kategorie: "Getreideprodukte", haltbarkeit: "3-6 Monate nach MHD bei kühler, trockener Lagerung", sehen_gut: "Trocken, aromatisch", sehen_schlecht: "Ranzig, Schimmel", riechen_gut: "Nussig", riechen_schlecht: "Ranzig, muffig", entsorgen: "Ranzig, Schimmel", hinweise: "Kühl, trocken lagern", ampel: "gelb" },
 { id: 318, name: "Harissa", kategorie: "Würzsaucen und Pasten", haltbarkeit: "6-12 Monate nach MHD ungeöffnet, 2-3 Wochen nach Öffnung gekühlt", sehen_gut: "Rötlich, aromatisch", sehen_schlecht: "Schimmel, ranzig", riechen_gut: "Würzig, scharf", riechen_schlecht: "Ranzig, muffig", entsorgen: "Schimmel, ranziger Geruch", hinweise: "Ölanteile können ranzig werden", ampel: "gelb" },
 { id: 190, name: "Hartkäse (Parmesan)", kategorie: "Käse", haltbarkeit: "3-6 Monate nach MHD im Kühlschrank (4-7°C), am Stück länger", sehen_gut: "Fest, farbtypisch", sehen_schlecht: "Schimmel an falscher Stelle", riechen_gut: "Aromatisch, nussig", riechen_schlecht: "Faulig, stechend", entsorgen: "Grosser Schimmelbefall, fauliger Geruch", hinweise: "Bei Hartkäse: Randschnitt möglich, bei starkem Befall entsorgen", ampel: "gelb" },
@@ -184,7 +195,7 @@
 { id: 97, name: "Heidelbeeren", kategorie: "Frisches Obst", haltbarkeit: "3-5 Tage bei Raumtemperatur, 5-10 Tage im Kühlschrank", sehen_gut: "Fest, blau", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Kühl lagern", ampel: "rot" },
 { id: 208, name: "Hering (Dose)", kategorie: "Konserven Fisch/Meeresfrüchte", haltbarkeit: "2-5 Jahre nach MHD bei Raumtemperatur", sehen_gut: "Farbe typisch", sehen_schlecht: "Ölig, verfärbt", riechen_gut: "Fischig", riechen_schlecht: "Faulig", entsorgen: "Aufgeblähte Dose, fauliger Geruch", hinweise: "In Lake oder Öl, bei Geruch entsorgen", ampel: "gruen" },
 { id: 269, name: "Himalayasalz", kategorie: "Salz", haltbarkeit: "Praktisch unbegrenzt bei trockener Lagerung", sehen_gut: "Körnig, trocken", sehen_schlecht: "Verklumpt", riechen_gut: "Neutral", riechen_schlecht: "Unangenehm", entsorgen: "Feuchte, Verunreinigung", hinweise: "Unbegrenzt haltbar", ampel: "gruen" },
-{ id: 96, name: "Himbeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, maximal 3 Tage im Kühlschrank", sehen_gut: "Fest, rot", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", ampel: "rot" },
+{ id: 96, name: "Himbeeren", kategorie: "Frisches Obst", haltbarkeit: "1-2 Tage bei Raumtemperatur, maximal 3 Tage im Kühlschrank", sehen_gut: "Fest, rot", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Sehr kurz haltbar", hygiene: "Vorsichtig unter fließendem Wasser waschen (sehr empfindlich). Bei Schimmel gesamte Packung entsorgen. Nicht vor Lagerung waschen. Einzelne schimmelige Beeren sofort aussortieren. Für Risikopersonen (Schwangere, Kinder): nur durchgegart verzehren (Marmelade, Kompott).", ampel: "rot" },
 { id: 11, name: "Honig", kategorie: "Aufstriche im Glas", haltbarkeit: "Praktisch unbegrenzt bei trockener Lagerung unter 25°C", sehen_gut: "Flüssig oder kristallisiert", sehen_schlecht: "Verfärbt, schimmelig (selten)", riechen_gut: "Angenehm, süss", riechen_schlecht: "Gärig (bei Feuchtigkeit)", entsorgen: "Schaumbildung, starker Gärgeruch", hinweise: "Kristallisation normal, bei Feuchte verderblich", ampel: "gruen" },
 { id: 116, name: "Honigmelone", kategorie: "Frisches Obst", haltbarkeit: "5-7 Tage ungeschnitten bei Raumtemperatur, 3-5 Tage geschnitten gekühlt", sehen_gut: "Fest, saftig", sehen_schlecht: "Matschig, Schimmel", riechen_gut: "Fruchtig, süss", riechen_schlecht: "Gärig, muffig", entsorgen: "Schimmel, fauliger Geruch", hinweise: "Kurz frisch", ampel: "rot" },
 { id: 161, name: "Ingwer (gemahlen)", kategorie: "Gewürze", haltbarkeit: "2-3 Jahre nach MHD bei trockener, dunkler Lagerung", sehen_gut: "Aromatisch, gelblich", sehen_schlecht: "Feucht, Schimmel", riechen_gut: "Würzig, scharf", riechen_schlecht: "Muffig", entsorgen: "Feuchte, Schimmel", hinweise: "Aromaverlust über Zeit", ampel: "gelb" },
@@ -404,13 +415,114 @@
 
             const kategorien = ['Alle', ...new Set(lebensmittel.map(item => item.kategorie))];
 
+            // Verbesserte Suchfunktion mit Teilwort-Suche und Fehlertoleranz
+            const searchMatch = (itemName, searchTerm) => {
+                if (!searchTerm) return true;
+                
+                const search = searchTerm.toLowerCase().trim();
+                const name = itemName.toLowerCase();
+                
+                // Exakte Übereinstimmung oder Teilwort
+                if (name.includes(search)) return true;
+                
+                // Fehlertoleranz: Buchstaben vertauscht oder ein Buchstabe fehlt
+                const words = name.split(' ');
+                for (let word of words) {
+                    // Prüfe ob Suchbegriff am Anfang des Wortes steht
+                    if (word.startsWith(search)) return true;
+                    
+                    // Levenshtein-Distanz für kurze Wörter (Tippfehler-Toleranz)
+                    if (search.length >= 4 && word.length >= 4) {
+                        let distance = 0;
+                        for (let i = 0; i < Math.min(search.length, word.length); i++) {
+                            if (search[i] !== word[i]) distance++;
+                        }
+                        // Maximal 1-2 Fehler erlauben
+                        if (distance <= 1 && Math.abs(search.length - word.length) <= 1) return true;
+                    }
+                }
+                
+                return false;
+            };
+
+            // Relevanz-Score berechnen (höher = relevanter)
+            const getSearchRelevance = (itemName, searchTerm) => {
+                if (!searchTerm) return 0;
+                
+                const search = searchTerm.toLowerCase().trim();
+                const name = itemName.toLowerCase();
+                
+                // 1. Höchste Priorität: Gesamter Name beginnt mit Suchbegriff
+                if (name.startsWith(search)) return 100;
+                
+                // 2. Hohe Priorität: Ein Wort beginnt mit Suchbegriff
+                const words = name.split(' ');
+                for (let i = 0; i < words.length; i++) {
+                    if (words[i].startsWith(search)) {
+                        // Erstes Wort wichtiger als spätere Wörter
+                        return 80 - (i * 10);
+                    }
+                }
+                
+                // 3. Mittlere Priorität: Exakte Teilwort-Übereinstimmung
+                if (name.includes(search)) return 50;
+                
+                // 4. Niedrige Priorität: Ähnlichkeit (Tippfehler)
+                return 20;
+            };
+
             const filteredItems = useMemo(() => {
-                return lebensmittel.filter(item => {
-                    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const filtered = lebensmittel.filter(item => {
+                    const matchesSearch = searchMatch(item.name, searchTerm);
                     const matchesCategory = selectedCategory === 'Alle' || item.kategorie === selectedCategory;
-                    return matchesSearch && matchesCategory;
+                    const matchesAmpel = ampelFilter === 'alle' || item.ampel === ampelFilter;
+                    return matchesSearch && matchesCategory && matchesAmpel;
                 });
-            }, [searchTerm, selectedCategory]);
+
+                // Sortiere nach Relevanz wenn Suchbegriff vorhanden
+                if (searchTerm && searchTerm.trim().length > 0) {
+                    return filtered.sort((a, b) => {
+                        const relevanceA = getSearchRelevance(a.name, searchTerm);
+                        const relevanceB = getSearchRelevance(b.name, searchTerm);
+                        return relevanceB - relevanceA; // Höhere Relevanz zuerst
+                    });
+                }
+
+                return filtered;
+            }, [searchTerm, selectedCategory, ampelFilter]);
+
+            // Suchvorschläge generieren (auch sortiert nach Relevanz)
+            const updateSearchSuggestions = (value) => {
+                if (!value || value.length < 2) {
+                    setSearchSuggestions([]);
+                    setShowSuggestions(false);
+                    return;
+                }
+                
+                const suggestions = lebensmittel
+                    .filter(item => searchMatch(item.name, value))
+                    .sort((a, b) => {
+                        const relevanceA = getSearchRelevance(a.name, value);
+                        const relevanceB = getSearchRelevance(b.name, value);
+                        return relevanceB - relevanceA;
+                    })
+                    .slice(0, 8) // Maximal 8 Vorschläge
+                    .map(item => item.name);
+                
+                setSearchSuggestions(suggestions);
+                setShowSuggestions(suggestions.length > 0);
+            };
+
+            const handleSearchChange = (e) => {
+                const value = e.target.value;
+                setSearchTerm(value);
+                updateSearchSuggestions(value);
+            };
+
+            const selectSuggestion = (suggestion) => {
+                setSearchTerm(suggestion);
+                setShowSuggestions(false);
+            };
 
             const getAmpelColor = (ampel) => {
                 if (ampel === 'gruen') return 'bg-green-100 border-green-500 text-green-800';
@@ -437,6 +549,52 @@
                         </div>
 
                         <div className="max-w-4xl mx-auto px-4 py-8">
+                            {/* Top 10 Schnellzugriff */}
+                            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                    ⚡ Schnellzugriff
+                                </h2>
+                                <p className="text-gray-600 mb-6">Die am häufigsten gesuchten Lebensmittel</p>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                    {[
+                                        { name: "Frischmilch", emoji: "🥛", ampel: "rot" },
+                                        { name: "Joghurt", emoji: "🧀", ampel: "gelb" },
+                                        { name: "Brot (frisch)", emoji: "🍞", ampel: "rot" },
+                                        { name: "Eier", emoji: "🥚", ampel: "gelb" },
+                                        { name: "Hackfleisch", emoji: "🥩", ampel: "rot" },
+                                        { name: "Butter", emoji: "🧈", ampel: "gelb" },
+                                        { name: "Aufschnitt (Schinken)", emoji: "🥓", ampel: "gelb" },
+                                        { name: "Tomaten", emoji: "🍅", ampel: "gelb" },
+                                        { name: "Gurken", emoji: "🥒", ampel: "gelb" },
+                                        { name: "Käse (Schnittkäse)", emoji: "🧀", ampel: "gelb" }
+                                    ].map((item, index) => {
+                                        const fullItem = lebensmittel.find(lm => lm.name === item.name);
+                                        const ampelColor = item.ampel === 'gruen' ? 'bg-green-50 border-green-300 hover:bg-green-100' :
+                                                          item.ampel === 'gelb' ? 'bg-yellow-50 border-yellow-300 hover:bg-yellow-100' :
+                                                          'bg-red-50 border-red-300 hover:bg-red-100';
+                                        const ampelIcon = item.ampel === 'gruen' ? '🟢' : item.ampel === 'gelb' ? '🟡' : '🔴';
+                                        
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => {
+                                                    if (fullItem) {
+                                                        setSelectedItem(fullItem);
+                                                        setView('detail');
+                                                    }
+                                                }}
+                                                className={`${ampelColor} border-2 rounded-lg p-4 transition cursor-pointer text-center flex flex-col items-center justify-center gap-2`}
+                                            >
+                                                <span className="text-3xl">{item.emoji}</span>
+                                                <span className="text-sm font-semibold text-gray-800 leading-tight">{item.name}</span>
+                                                <span className="text-lg">{ampelIcon}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Ist mein Lebensmittel noch gut?</h2>
                                 <p className="text-gray-600 mb-6">
@@ -448,34 +606,53 @@
                                     className="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
                                 >
                                     <List className="w-5 h-5" />
-                                    Lebensmittel jetzt prüfen
+                                    Alle Lebensmittel durchsuchen
                                 </button>
                             </div>
 
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">🎯 Ampel-System</h2>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                                <button 
+                                    onClick={() => {
+                                        setAmpelFilter('gruen');
+                                        setView('list');
+                                    }}
+                                    className="bg-green-50 border-2 border-green-200 rounded-lg p-6 hover:bg-green-100 transition cursor-pointer text-left"
+                                >
                                     <div className="flex items-center gap-3 mb-3">
                                         <CheckCircle className="w-8 h-8 text-green-600" />
                                         <h3 className="text-lg font-bold text-green-800">Grün</h3>
                                     </div>
                                     <p className="text-gray-700">Sehr lange haltbar, auch nach MHD meist noch gut</p>
-                                </div>
+                                </button>
 
-                                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+                                <button 
+                                    onClick={() => {
+                                        setAmpelFilter('gelb');
+                                        setView('list');
+                                    }}
+                                    className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 hover:bg-yellow-100 transition cursor-pointer text-left"
+                                >
                                     <div className="flex items-center gap-3 mb-3">
                                         <AlertTriangle className="w-8 h-8 text-yellow-600" />
                                         <h3 className="text-lg font-bold text-yellow-800">Gelb</h3>
                                     </div>
                                     <p className="text-gray-700">Vorsichtig prüfen, Sinne einsetzen</p>
-                                </div>
+                                </button>
 
-                                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+                                <button 
+                                    onClick={() => {
+                                        setAmpelFilter('rot');
+                                        setView('list');
+                                    }}
+                                    className="bg-red-50 border-2 border-red-200 rounded-lg p-6 hover:bg-red-100 transition cursor-pointer text-left"
+                                >
                                     <div className="flex items-center gap-3 mb-3">
                                         <XCircle className="w-8 h-8 text-red-600" />
                                         <h3 className="text-lg font-bold text-red-800">Rot</h3>
                                     </div>
                                     <p className="text-gray-700">Schnell verderblich, genau kontrollieren</p>
-                                </div>
+                                </button>
                             </div>
 
                             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mt-8">
@@ -513,7 +690,10 @@
                             <div className="max-w-4xl mx-auto px-4 py-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <button
-                                        onClick={() => setView('home')}
+                                        onClick={() => {
+                                            setView('home');
+                                            setAmpelFilter('alle');
+                                        }}
                                         className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold"
                                     >
                                         <Home className="w-5 h-5" />
@@ -529,16 +709,36 @@
                                         type="text"
                                         placeholder="Lebensmittel suchen..."
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
+                                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                         className="w-full pl-10 pr-10 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
                                     />
                                     {searchTerm && (
                                         <button
-                                            onClick={() => setSearchTerm('')}
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setShowSuggestions(false);
+                                            }}
                                             className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                                         >
                                             <X className="w-5 h-5" />
                                         </button>
+                                    )}
+                                    
+                                    {/* Dropdown mit Suchvorschlägen */}
+                                    {showSuggestions && searchSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                            {searchSuggestions.map((suggestion, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => selectSuggestion(suggestion)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition"
+                                                >
+                                                    <span className="text-gray-800">{suggestion}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
 
@@ -556,6 +756,52 @@
                                             {kat}
                                         </button>
                                     ))}
+                                </div>
+
+                                <div className="flex gap-2 overflow-x-auto pb-2 mt-3">
+                                    <button
+                                        onClick={() => setAmpelFilter('alle')}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap font-medium transition flex items-center gap-2 ${
+                                            ampelFilter === 'alle'
+                                                ? 'bg-gray-600 text-white'
+                                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        Alle Ampeln
+                                    </button>
+                                    <button
+                                        onClick={() => setAmpelFilter('gruen')}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap font-medium transition flex items-center gap-2 ${
+                                            ampelFilter === 'gruen'
+                                                ? 'bg-green-600 text-white'
+                                                : 'bg-white text-gray-700 hover:bg-gray-100 border-2 border-green-200'
+                                        }`}
+                                    >
+                                        <CheckCircle className="w-4 h-4" />
+                                        Grün
+                                    </button>
+                                    <button
+                                        onClick={() => setAmpelFilter('gelb')}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap font-medium transition flex items-center gap-2 ${
+                                            ampelFilter === 'gelb'
+                                                ? 'bg-yellow-600 text-white'
+                                                : 'bg-white text-gray-700 hover:bg-gray-100 border-2 border-yellow-200'
+                                        }`}
+                                    >
+                                        <AlertTriangle className="w-4 h-4" />
+                                        Gelb
+                                    </button>
+                                    <button
+                                        onClick={() => setAmpelFilter('rot')}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap font-medium transition flex items-center gap-2 ${
+                                            ampelFilter === 'rot'
+                                                ? 'bg-red-600 text-white'
+                                                : 'bg-white text-gray-700 hover:bg-gray-100 border-2 border-red-200'
+                                        }`}
+                                    >
+                                        <XCircle className="w-4 h-4" />
+                                        Rot
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -657,6 +903,13 @@
                                 <h2 className="text-xl font-bold text-red-800 mb-3">🗑️ Wann entsorgen?</h2>
                                 <p className="text-gray-800 font-medium">{selectedItem.entsorgen}</p>
                             </div>
+
+                            {selectedItem.hygiene && (
+                                <div className="bg-orange-50 border-2 border-orange-400 rounded-lg p-6">
+                                    <h2 className="text-xl font-bold text-orange-900 mb-3">⚠️ HYGIENE & SICHERE VERARBEITUNG</h2>
+                                    <p className="text-gray-800 leading-relaxed">{selectedItem.hygiene}</p>
+                                </div>
+                            )}
 
                             <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
                                 <h2 className="text-xl font-bold text-blue-800 mb-3">💡 Wichtige Hinweise</h2>
