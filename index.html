@@ -83,6 +83,12 @@
             const [ampelFilter, setAmpelFilter] = useState('alle');
             const [searchSuggestions, setSearchSuggestions] = useState([]);
             const [showSuggestions, setShowSuggestions] = useState(false);
+            const [showInstallPopup, setShowInstallPopup] = useState(false);
+            const [showInstallBanner, setShowInstallBanner] = useState(() => {
+                // Prüfe ob Banner schon geschlossen wurde (localStorage)
+                return localStorage.getItem('hideInstallBanner') !== 'true';
+            });
+            const [installTab, setInstallTab] = useState('ios');
 
             const lebensmittel = [
                 { id: 229, name: "Abgepackter Kuchen", kategorie: "Kuchen und Süssgebäck", haltbarkeit: "1-2 Wochen nach MHD bei Raumtemperatur", sehen_gut: "Feucht, frisch", sehen_schlecht: "Schimmel, trocken", riechen_gut: "Süss, aromatisch", riechen_schlecht: "Schimmel, muffig", entsorgen: "Schimmel, muffiger Geruch", hinweise: "Kurz haltbar geöffnet", ampel: "gelb" },
@@ -538,17 +544,79 @@
                 return <CheckCircle className="w-5 h-5" />;
             };
 
+            // View-Rendering
+            let content = null;
+
             if (view === 'home') {
-                return (
+                content = (
                     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
                         <div className="bg-white shadow-md">
                             <div className="max-w-4xl mx-auto px-4 py-6">
-                                <h1 className="text-3xl font-bold text-green-700 text-center">🥫 MHD-Check by Martin Heinzmann</h1>
-                                <p className="text-center text-gray-600 mt-2">Lebensmittel richtig prüfen - Verschwendung vermeiden</p>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex-1"></div>
+                                    <div className="flex-1 text-center">
+                                        <h1 className="text-3xl font-bold text-green-700">🥫 MHD-Check by Martin Heinzmann</h1>
+                                        <p className="text-gray-600 mt-2">Lebensmittel richtig prüfen - Verschwendung vermeiden</p>
+                                    </div>
+                                    <div className="flex-1 flex justify-end">
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log('Header Button geklickt');
+                                                setShowInstallPopup(true);
+                                            }}
+                                            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition flex items-center gap-2"
+                                            title="Als App installieren"
+                                        >
+                                            <span className="text-xl">📱</span>
+                                            <span className="hidden md:inline">Installieren</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         <div className="max-w-4xl mx-auto px-4 py-8">
+                            {/* Installations-Banner (nur beim ersten Besuch) */}
+                            {showInstallBanner && (
+                                <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-8 shadow-lg">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-bold text-green-800 mb-2 flex items-center gap-2">
+                                                💡 Tipp: MHD-Check als App installieren!
+                                            </h3>
+                                            <p className="text-gray-700 mb-3">
+                                                Installiere MHD-Check auf deinem Smartphone für schnellen Zugriff - wie eine echte App!
+                                            </p>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    console.log('Banner Button geklickt');
+                                                    setShowInstallPopup(true);
+                                                }}
+                                                className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+                                            >
+                                                📱 Anleitung anzeigen
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log('Banner schließen geklickt');
+                                                setShowInstallBanner(false);
+                                                localStorage.setItem('hideInstallBanner', 'true');
+                                            }}
+                                            className="text-gray-400 hover:text-gray-600 text-2xl"
+                                            title="Schließen"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                             {/* Top 10 Schnellzugriff */}
                             <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
@@ -559,15 +627,15 @@
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                                     {[
                                         { name: "Frischmilch", emoji: "🥛", ampel: "rot" },
-                                        { name: "Joghurt", emoji: "🧀", ampel: "gelb" },
-                                        { name: "Brot (frisch)", emoji: "🍞", ampel: "rot" },
-                                        { name: "Eier", emoji: "🥚", ampel: "gelb" },
+                                        { name: "Naturjoghurt", emoji: "🧀", ampel: "gelb" },
+                                        { name: "Brötchen (frisch aufbackbar)", emoji: "🍞", ampel: "rot" },
+                                        { name: "Frische Schaleneier", emoji: "🥚", ampel: "gelb" },
                                         { name: "Hackfleisch", emoji: "🥩", ampel: "rot" },
                                         { name: "Butter", emoji: "🧈", ampel: "gelb" },
                                         { name: "Aufschnitt (Schinken)", emoji: "🥓", ampel: "gelb" },
-                                        { name: "Tomaten", emoji: "🍅", ampel: "gelb" },
+                                        { name: "Tomaten (frisch)", emoji: "🍅", ampel: "gelb" },
                                         { name: "Gurken", emoji: "🥒", ampel: "gelb" },
-                                        { name: "Käse (Schnittkäse)", emoji: "🧀", ampel: "gelb" }
+                                        { name: "Schnittkäse (Edamer)", emoji: "🧀", ampel: "gelb" }
                                     ].map((item, index) => {
                                         const fullItem = lebensmittel.find(lm => lm.name === item.name);
                                         const ampelColor = item.ampel === 'gruen' ? 'bg-green-50 border-green-300 hover:bg-green-100' :
@@ -674,17 +742,15 @@
                                     Rat einholen.
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                    © 2025 MHD-Check App. Alle Rechte vorbehalten.
+                                    © 2026 MHD-Check App. Alle Rechte vorbehalten.
                                 </p>
                             </div>
 							
                         </div>
                     </div>
                 );
-            }
-
-            if (view === 'list') {
-                return (
+            } else if (view === 'list') {
+                content = (
                     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
                         <div className="bg-white shadow-md">
                             <div className="max-w-4xl mx-auto px-4 py-6">
@@ -700,7 +766,13 @@
                                         Zurück
                                     </button>
                                     <h1 className="text-2xl font-bold text-green-700">🥫 MHD-Check by Martin Heinzmann</h1>
-                                    <div className="w-20"></div>
+                                    <button
+                                        onClick={() => setShowInstallPopup(true)}
+                                        className="bg-green-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-green-700 transition text-xl"
+                                        title="Als App installieren"
+                                    >
+                                        📱
+                                    </button>
                                 </div>
 
                                 <div className="relative mb-4">
@@ -833,17 +905,68 @@
 
                             {filteredItems.length === 0 && (
                                 <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-                                    <p className="text-gray-600 text-lg">Keine Lebensmittel gefunden</p>
-                                    <p className="text-gray-500 mt-2">Versuche einen anderen Suchbegriff</p>
+                                    <p className="text-gray-600 text-lg font-semibold mb-2">Keine Lebensmittel gefunden</p>
+                                    
+                                    {/* Intelligente Hilfe basierend auf aktiven Filtern */}
+                                    {searchTerm && (ampelFilter !== 'alle' || selectedCategory !== 'Alle') ? (
+                                        <div className="mt-4">
+                                            <p className="text-gray-700 mb-4">
+                                                {ampelFilter !== 'alle' && selectedCategory !== 'Alle' 
+                                                    ? `Kein "${searchTerm}" in Kategorie "${selectedCategory}" mit Ampel "${ampelFilter === 'gruen' ? 'Grün' : ampelFilter === 'gelb' ? 'Gelb' : 'Rot'}" gefunden.`
+                                                    : ampelFilter !== 'alle'
+                                                    ? `Kein "${searchTerm}" mit Ampel "${ampelFilter === 'gruen' ? 'Grün' : ampelFilter === 'gelb' ? 'Gelb' : 'Rot'}" gefunden.`
+                                                    : `Kein "${searchTerm}" in Kategorie "${selectedCategory}" gefunden.`
+                                                }
+                                            </p>
+                                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                                {ampelFilter !== 'alle' && (
+                                                    <button
+                                                        onClick={() => setAmpelFilter('alle')}
+                                                        className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+                                                    >
+                                                        🔍 In allen Ampel-Kategorien suchen
+                                                    </button>
+                                                )}
+                                                {selectedCategory !== 'Alle' && (
+                                                    <button
+                                                        onClick={() => setSelectedCategory('Alle')}
+                                                        className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                                                    >
+                                                        📂 In allen Kategorien suchen
+                                                    </button>
+                                                )}
+                                                {(ampelFilter !== 'alle' || selectedCategory !== 'Alle') && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setAmpelFilter('alle');
+                                                            setSelectedCategory('Alle');
+                                                        }}
+                                                        className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                                                    >
+                                                        ↺ Alle Filter zurücksetzen
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : searchTerm ? (
+                                        <p className="text-gray-500 mt-2">
+                                            Versuche einen anderen Suchbegriff oder prüfe die Schreibweise
+                                        </p>
+                                    ) : (
+                                        <p className="text-gray-500 mt-2">
+                                            {ampelFilter !== 'alle' 
+                                                ? `Keine ${ampelFilter === 'gruen' ? 'grünen' : ampelFilter === 'gelb' ? 'gelben' : 'roten'} Lebensmittel in dieser Kategorie`
+                                                : 'Keine Lebensmittel in dieser Kategorie'
+                                            }
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
                 );
-            }
-
-            if (selectedItem && view === 'detail') {
-                return (
+            } else if (selectedItem && view === 'detail') {
+                content = (
                     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
                         <div className="bg-white shadow-md">
                             <div className="max-w-4xl mx-auto px-4 py-6">
@@ -930,7 +1053,201 @@
                 );
             }
 
-            return null;
+            return (
+                <>
+                    {/* Render aktuelle View */}
+                    {content}
+                    
+                    {/* Installations-Popup - wird über allen Views angezeigt */}
+                    {showInstallPopup && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowInstallPopup(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                                <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                        📱 MHD-Check als App installieren
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowInstallPopup(false)}
+                                        className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                                
+                                <div className="p-6">
+                                    {/* Tabs */}
+                                    <div className="flex gap-2 mb-6">
+                                        <button
+                                            onClick={() => setInstallTab('ios')}
+                                            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition ${
+                                                installTab === 'ios'
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            🍎 iPhone/iPad
+                                        </button>
+                                        <button
+                                            onClick={() => setInstallTab('android')}
+                                            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition ${
+                                                installTab === 'android'
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            🤖 Android
+                                        </button>
+                                    </div>
+
+                                    {/* iOS Anleitung */}
+                                    {installTab === 'ios' && (
+                                        <div className="space-y-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                <p className="text-sm text-blue-800 font-semibold">
+                                                    ⚠️ Wichtig: Funktioniert nur mit Safari Browser!
+                                                </p>
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        1
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Safari öffnen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Öffne diese Seite in <strong>Safari</strong> (nicht Chrome oder anderer Browser)
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        2
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Teilen-Symbol antippen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Tippe unten in der Mitte auf das <strong>Teilen-Symbol</strong> 📤<br/>
+                                                            (Quadrat mit Pfeil nach oben)
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        3
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">"Zum Home-Bildschirm"</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Scrolle nach unten und wähle<br/>
+                                                            <strong>"Zum Home-Bildschirm"</strong> ➕
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        4
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Hinzufügen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Tippe oben rechts auf <strong>"Hinzufügen"</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
+                                                <p className="text-green-800 font-semibold">
+                                                    ✅ Fertig! Das MHD-Check Icon erscheint jetzt auf deinem Homescreen.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Android Anleitung */}
+                                    {installTab === 'android' && (
+                                        <div className="space-y-4">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                <p className="text-sm text-blue-800 font-semibold">
+                                                    💡 Tipp: Am besten mit Chrome Browser
+                                                </p>
+                                            </div>
+                                            
+                                            <div className="space-y-4">
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        1
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Chrome öffnen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Öffne diese Seite in <strong>Chrome</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        2
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Menü öffnen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Tippe oben rechts auf <strong>⋮</strong> (drei Punkte)
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        3
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">"Zum Startbildschirm hinzufügen"</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Wähle <strong>"Zum Startbildschirm hinzufügen"</strong><br/>
+                                                            oder <strong>"App installieren"</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-4">
+                                                    <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
+                                                        4
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-bold text-gray-800 mb-1">Bestätigen</h4>
+                                                        <p className="text-gray-600 text-sm">
+                                                            Tippe auf <strong>"Hinzufügen"</strong> oder <strong>"Installieren"</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
+                                                <p className="text-green-800 font-semibold">
+                                                    ✅ Fertig! Die MHD-Check App ist jetzt auf deinem Startbildschirm.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => setShowInstallPopup(false)}
+                                        className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition mt-6"
+                                    >
+                                        Schließen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
         };
 
         ReactDOM.render(<MHDCheckApp />, document.getElementById('root'));
