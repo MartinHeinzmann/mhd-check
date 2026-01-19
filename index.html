@@ -93,7 +93,7 @@
             // Ref für das Suchfeld
             const searchInputRef = useRef(null);
             
-            // Scrolle zum Seitenanfang wenn list-view geöffnet wird
+            // Scrolle zum Seitenanfang wenn list-view oder detail-view geöffnet wird
             useEffect(() => {
                 if (view === 'list') {
                     // Kurze Verzögerung damit die View gerendert ist
@@ -103,6 +103,11 @@
                         if (searchInputRef.current) {
                             searchInputRef.current.focus();
                         }
+                    }, 100);
+                } else if (view === 'detail') {
+                    // Scrolle auch bei Detail-View zum Anfang
+                    setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }, 100);
                 }
             }, [view]);
