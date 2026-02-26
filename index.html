@@ -84,6 +84,7 @@
             const [searchSuggestions, setSearchSuggestions] = useState([]);
             const [showSuggestions, setShowSuggestions] = useState(false);
             const [showInstallPopup, setShowInstallPopup] = useState(false);
+            const [showHomeSuggestions, setShowHomeSuggestions] = useState(false);
             const [showInstallBanner, setShowInstallBanner] = useState(() => {
                 // Prüfe ob Banner schon geschlossen wurde (localStorage)
                 return localStorage.getItem('hideInstallBanner') !== 'true';
@@ -553,6 +554,18 @@
                 setShowSuggestions(false);
             };
 
+            const selectItemFromHome = (name) => {
+                const item = lebensmittel.find(lm => lm.name === name);
+                setSearchTerm(name);
+                setShowHomeSuggestions(false);
+                if (item) {
+                    setSelectedItem(item);
+                    setView('detail');
+                } else {
+                    setView('list');
+                }
+            };
+
             const getAmpelColor = (ampel) => {
                 if (ampel === 'gruen') return 'bg-green-100 border-green-500 text-green-800';
                 if (ampel === 'gelb') return 'bg-yellow-100 border-yellow-500 text-yellow-800';
@@ -574,12 +587,12 @@
                 content = (
                     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
                         <div className="bg-white shadow-md">
-                            <div className="max-w-4xl mx-auto px-4 py-6">
+                            <div className="max-w-4xl mx-auto px-4 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1"></div>
                                     <div className="flex-1 text-center">
                                         <h1 className="text-3xl font-bold text-green-700">🥫 MHD-Check by Martin Heinzmann</h1>
-                                        <p className="text-gray-600 mt-2">Lebensmittel richtig prüfen - Verschwendung vermeiden</p>
+                                        <p className="text-gray-600 mt-1 md:whitespace-nowrap">Lebensmittel richtig prüfen - Verschwendung vermeiden</p>
                                     </div>
                                     <div className="flex-1 flex justify-end">
                                         <button
@@ -600,7 +613,7 @@
                             </div>
                         </div>
 
-                        <div className="max-w-4xl mx-auto px-4 py-8">
+                        <div className="max-w-4xl mx-auto px-4 py-6">
                             {/* Installations-Banner (nur beim ersten Besuch) */}
                             {showInstallBanner && (
                                 <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6 mb-8 shadow-lg">
@@ -640,6 +653,58 @@
                                     </div>
                                 </div>
                             )}
+                            {/* Suchfeld Startseite */}
+                            <div className="bg-white rounded-lg shadow-lg p-5 mb-6">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Lebensmittel suchen..."
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setSearchTerm(value);
+                                            updateSearchSuggestions(value);
+                                            setShowHomeSuggestions(value.length >= 2);
+                                            setShowSuggestions(false);
+                                        }}
+                                        onFocus={() => searchTerm.length >= 2 && setShowHomeSuggestions(true)}
+                                        onBlur={() => setTimeout(() => setShowHomeSuggestions(false), 200)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && searchTerm.trim()) {
+                                                setShowHomeSuggestions(false);
+                                                setView('list');
+                                            }
+                                        }}
+                                        className="w-full pl-10 pr-10 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none text-base"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => { setSearchTerm(''); setShowHomeSuggestions(false); }}
+                                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    )}
+
+                                    {/* Autocomplete-Dropdown */}
+                                    {showHomeSuggestions && searchSuggestions.length > 0 && (
+                                        <div className="absolute z-10 w-full mt-1 bg-white border-2 border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                            {searchSuggestions.map((suggestion, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => selectItemFromHome(suggestion)}
+                                                    className="w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition"
+                                                >
+                                                    <Search className="inline w-4 h-4 text-gray-400 mr-2" />
+                                                    <span className="text-gray-800">{suggestion}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Top 10 Schnellzugriff */}
                             <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
